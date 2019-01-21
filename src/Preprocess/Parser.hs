@@ -1,4 +1,4 @@
-module Preprecess.Parser
+module Preprocess.Parser
   ( parseAffineMatrixFile
   , parseDetectedRegionFile
   ) where
