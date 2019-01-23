@@ -1,11 +1,11 @@
-module Preprocess where
+module OxfordAffine where
 
 import           Control.Monad               as M
 import           Control.Parallel.Strategies
 import           Data.List                   as L
 import           Data.Vector.Unboxed         as VU
-import           Preprocess.Parser
-import           Preprocess.Region
+import           OxfordAffine.Parser
+import           OxfordAffine.Region
 import           System.FilePath
 import           System.IO                   as IO
 import           Text.Printf

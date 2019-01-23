@@ -1,4 +1,4 @@
-module Preprocess.Region
+module OxfordAffine.Region
   ( module Types
   , detectedRegionSet
   , detectedRegionBoundary

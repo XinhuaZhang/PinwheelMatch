@@ -1,3 +1,4 @@
+module PlotDetectedRegion where
 import           Control.Monad               as M
 import           Control.Parallel.Strategies
 import           Data.Array.Repa             as R
@@ -6,8 +7,9 @@ import           Data.Array.Unboxed          as Arr
 import           Data.List                   as L
 import           Data.Set                    as S
 import           Image.IO
-import           Preprocess.Parser
-import           Preprocess.Region
+import           OxfordAffine.Parser
+import           OxfordAffine.Region
+import           System.Directory
 import           System.Environment
 import           System.FilePath
 
@@ -49,9 +51,11 @@ main = do
                 writeArray arr (2, x, y) 255)
              zs1
            return arr) :: UArray (Int, Int, Int) Double
-  plotImageRepa ("output/" L.++ takeBaseName imagePath L.++ ".png") .
+      folderPath = "output/test/PlotDetectedRegion/"
+  createDirectoryIfMissing True folderPath
+  plotImageRepa (folderPath L.++ takeBaseName imagePath L.++ ".png") .
     Image 8 . fromListUnboxed (extent img) . Arr.elems $
     newArray
-  plotImageRepa ("output/" L.++ takeBaseName imagePath L.++ "_fill.png") .
+  plotImageRepa (folderPath L.++ takeBaseName imagePath L.++ "_fill.png") .
     Image 8 . fromListUnboxed (extent img) . Arr.elems $
     newArray1
