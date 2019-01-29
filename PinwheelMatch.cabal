@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 3f83a06c46deabb4ce9916c710d064108cb91137143e5a71391fd0dd83519340
+-- hash: 70e2806edbff6f9d7f80693699b111c80850d83bdc560096e5d7cec98d938c10
 
 name:           PinwheelMatch
 version:        0.1.0.0
@@ -27,6 +27,7 @@ source-repository head
 
 library
   exposed-modules:
+      Descriptor.EllipsePinwheel
       Descriptor.Pinwheel
       DFT.FFI
       DFT.Plan
@@ -50,6 +51,7 @@ library
     , binary >=0.8.6.0 && <0.9.0.0
     , conduit >=1.3.1 && <1.4.0
     , containers >=0.6.0.1 && <0.7.0.0
+    , deepseq >=1.4.3.0 && <1.5.0.0
     , directory >=1.3.3.0 && <1.4.0.0
     , filepath >=1.4.2.1 && <1.5.0.0
     , hashable >=1.2.7.0 && <1.3.0.0
@@ -79,6 +81,136 @@ executable PinwheelMatch-exe
     , binary >=0.8.6.0 && <0.9.0.0
     , conduit >=1.3.1 && <1.4.0
     , containers >=0.6.0.1 && <0.7.0.0
+    , deepseq >=1.4.3.0 && <1.5.0.0
+    , directory >=1.3.3.0 && <1.4.0.0
+    , filepath >=1.4.2.1 && <1.5.0.0
+    , hashable >=1.2.7.0 && <1.3.0.0
+    , hmatrix >=0.19.0.0 && <0.20.0.0
+    , monad-parallel >=0.7.2.3 && <0.8.0.0
+    , parallel >=3.2.2.0 && <4.0.0.0
+    , random >=1.1 && <2.0
+    , repa >=3.4.1.4 && <3.5.0.0
+    , resourcet >=1.2.2
+    , text >=1.2.3.1 && <1.3.0.0
+    , unordered-containers >=0.2.9.0 && <0.3.0.0
+    , vector >=0.12.0.2 && <0.13.0.0
+  default-language: Haskell2010
+
+test-suite ComputeDescriptor-test
+  type: exitcode-stdio-1.0
+  main-is: ComputeDescriptor.hs
+  other-modules:
+      ComputeDescriptorNormalizedRegionOxford
+      ComputeDescriptorVariedSizeNormalizedRegionOxford
+      PlotDetectedRegion
+      PlotEllipsePinwheel
+      Paths_PinwheelMatch
+  hs-source-dirs:
+      test
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N -O2 -j4 -main-is ComputeDescriptor
+  extra-libraries:
+      stdc++
+      lapack
+      gomp
+      fftw3
+      fftw3f
+      fftw3l
+      m
+  build-depends:
+      JuicyPixels >=3.3.3 && <4.0.0
+    , PinwheelMatch
+    , array >=0.5.3.0 && <0.6.0.0
+    , base >=4.7 && <5
+    , binary >=0.8.6.0 && <0.9.0.0
+    , conduit >=1.3.1 && <1.4.0
+    , containers >=0.6.0.1 && <0.7.0.0
+    , deepseq >=1.4.3.0 && <1.5.0.0
+    , directory >=1.3.3.0 && <1.4.0.0
+    , filepath >=1.4.2.1 && <1.5.0.0
+    , hashable >=1.2.7.0 && <1.3.0.0
+    , hmatrix >=0.19.0.0 && <0.20.0.0
+    , monad-parallel >=0.7.2.3 && <0.8.0.0
+    , parallel >=3.2.2.0 && <4.0.0.0
+    , random >=1.1 && <2.0
+    , repa >=3.4.1.4 && <3.5.0.0
+    , resourcet >=1.2.2
+    , text >=1.2.3.1 && <1.3.0.0
+    , unordered-containers >=0.2.9.0 && <0.3.0.0
+    , vector >=0.12.0.2 && <0.13.0.0
+  default-language: Haskell2010
+
+test-suite ComputeDescriptorNormalizedRegionOxford-test
+  type: exitcode-stdio-1.0
+  main-is: ComputeDescriptorNormalizedRegionOxford.hs
+  other-modules:
+      ComputeDescriptor
+      ComputeDescriptorVariedSizeNormalizedRegionOxford
+      PlotDetectedRegion
+      PlotEllipsePinwheel
+      Paths_PinwheelMatch
+  hs-source-dirs:
+      test
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N -O2 -j4 -main-is ComputeDescriptorNormalizedRegionOxford
+  extra-libraries:
+      stdc++
+      lapack
+      gomp
+      fftw3
+      fftw3f
+      fftw3l
+      m
+  build-depends:
+      JuicyPixels >=3.3.3 && <4.0.0
+    , PinwheelMatch
+    , array >=0.5.3.0 && <0.6.0.0
+    , base >=4.7 && <5
+    , binary >=0.8.6.0 && <0.9.0.0
+    , conduit >=1.3.1 && <1.4.0
+    , containers >=0.6.0.1 && <0.7.0.0
+    , deepseq >=1.4.3.0 && <1.5.0.0
+    , directory >=1.3.3.0 && <1.4.0.0
+    , filepath >=1.4.2.1 && <1.5.0.0
+    , hashable >=1.2.7.0 && <1.3.0.0
+    , hmatrix >=0.19.0.0 && <0.20.0.0
+    , monad-parallel >=0.7.2.3 && <0.8.0.0
+    , parallel >=3.2.2.0 && <4.0.0.0
+    , random >=1.1 && <2.0
+    , repa >=3.4.1.4 && <3.5.0.0
+    , resourcet >=1.2.2
+    , text >=1.2.3.1 && <1.3.0.0
+    , unordered-containers >=0.2.9.0 && <0.3.0.0
+    , vector >=0.12.0.2 && <0.13.0.0
+  default-language: Haskell2010
+
+test-suite ComputeDescriptorVariedSizeNormalizedRegionOxford-test
+  type: exitcode-stdio-1.0
+  main-is: ComputeDescriptorVariedSizeNormalizedRegionOxford.hs
+  other-modules:
+      ComputeDescriptor
+      ComputeDescriptorNormalizedRegionOxford
+      PlotDetectedRegion
+      PlotEllipsePinwheel
+      Paths_PinwheelMatch
+  hs-source-dirs:
+      test
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N -O2 -j4 -main-is ComputeDescriptorVariedSizeNormalizedRegionOxford
+  extra-libraries:
+      stdc++
+      lapack
+      gomp
+      fftw3
+      fftw3f
+      fftw3l
+      m
+  build-depends:
+      JuicyPixels >=3.3.3 && <4.0.0
+    , PinwheelMatch
+    , array >=0.5.3.0 && <0.6.0.0
+    , base >=4.7 && <5
+    , binary >=0.8.6.0 && <0.9.0.0
+    , conduit >=1.3.1 && <1.4.0
+    , containers >=0.6.0.1 && <0.7.0.0
+    , deepseq >=1.4.3.0 && <1.5.0.0
     , directory >=1.3.3.0 && <1.4.0.0
     , filepath >=1.4.2.1 && <1.5.0.0
     , hashable >=1.2.7.0 && <1.3.0.0
@@ -97,6 +229,10 @@ test-suite PlotDetectedRegion-test
   type: exitcode-stdio-1.0
   main-is: PlotDetectedRegion.hs
   other-modules:
+      ComputeDescriptor
+      ComputeDescriptorNormalizedRegionOxford
+      ComputeDescriptorVariedSizeNormalizedRegionOxford
+      PlotEllipsePinwheel
       Paths_PinwheelMatch
   hs-source-dirs:
       test
@@ -109,37 +245,7 @@ test-suite PlotDetectedRegion-test
     , binary >=0.8.6.0 && <0.9.0.0
     , conduit >=1.3.1 && <1.4.0
     , containers >=0.6.0.1 && <0.7.0.0
-    , directory >=1.3.3.0 && <1.4.0.0
-    , filepath >=1.4.2.1 && <1.5.0.0
-    , hashable >=1.2.7.0 && <1.3.0.0
-    , hmatrix >=0.19.0.0 && <0.20.0.0
-    , monad-parallel >=0.7.2.3 && <0.8.0.0
-    , parallel >=3.2.2.0 && <4.0.0.0
-    , random >=1.1 && <2.0
-    , repa >=3.4.1.4 && <3.5.0.0
-    , resourcet >=1.2.2
-    , text >=1.2.3.1 && <1.3.0.0
-    , unordered-containers >=0.2.9.0 && <0.3.0.0
-    , vector >=0.12.0.2 && <0.13.0.0
-  default-language: Haskell2010
-
-test-suite Test-test
-  type: exitcode-stdio-1.0
-  main-is: Test.hs
-  other-modules:
-      PlotDetectedRegion
-      Paths_PinwheelMatch
-  hs-source-dirs:
-      test
-  ghc-options: -threaded -rtsopts -with-rtsopts=-N -O2 -j4 -main-is Test
-  build-depends:
-      JuicyPixels >=3.3.3 && <4.0.0
-    , PinwheelMatch
-    , array >=0.5.3.0 && <0.6.0.0
-    , base >=4.7 && <5
-    , binary >=0.8.6.0 && <0.9.0.0
-    , conduit >=1.3.1 && <1.4.0
-    , containers >=0.6.0.1 && <0.7.0.0
+    , deepseq >=1.4.3.0 && <1.5.0.0
     , directory >=1.3.3.0 && <1.4.0.0
     , filepath >=1.4.2.1 && <1.5.0.0
     , hashable >=1.2.7.0 && <1.3.0.0

@@ -1,8 +1,9 @@
 module OxfordAffine.Parser
-  ( parseAffineMatrixFile
+  ( module Types
+  , parseAffineMatrixFile
   , parseDetectedRegionFile
+  , parseDetectedRegionFeatureFile
   ) where
-
 
 import           Data.Char
 import           Data.List           as L
@@ -13,7 +14,7 @@ import           Data.Vector.Unboxed as VU
 import           System.IO           as IO
 import           Types
 
-{-# INLINE  parseDouble #-}
+{-# INLINE parseDouble #-}
 parseDouble :: Text -> [Double]
 parseDouble txt
   | T.null xs = []
@@ -48,15 +49,21 @@ parseAffineMatrixFile filePath =
     return . parseAffineMatrix $ txt
 
 {-# INLINE parseDetectedRegion #-}
-parseDetectedRegion :: Text -> [DetectedRegion]
+parseDetectedRegion :: Text -> [DetectedRegion ()]
 parseDetectedRegion =
+  L.map ((\(x:y:a:b:c:_) -> DetectedRegion x y a b c ()) . parseDouble) .
+  T.lines
+
+{-# INLINE parseDetectedRegionFeature #-}
+parseDetectedRegionFeature :: Text -> [DetectedRegion (VU.Vector Double)]
+parseDetectedRegionFeature =
   L.map
     ((\(x:y:a:b:c:xs) -> DetectedRegion x y a b c . VU.fromList $ xs) .
      parseDouble) .
   T.lines
 
 {-# INLINE parseDetectedRegionFile #-}
-parseDetectedRegionFile :: FilePath -> IO [DetectedRegion]
+parseDetectedRegionFile :: FilePath -> IO [DetectedRegion ()]
 parseDetectedRegionFile filePath =
   withFile filePath ReadMode $ \h -> do
     descriptorLen <- read <$> IO.hGetLine h :: IO Int
@@ -71,3 +78,19 @@ parseDetectedRegionFile filePath =
            " /= actural number " L.++
            show (L.length xs)
 
+{-# INLINE parseDetectedRegionFeatureFile #-}
+parseDetectedRegionFeatureFile ::
+     FilePath -> IO [DetectedRegion (VU.Vector Double)]
+parseDetectedRegionFeatureFile filePath =
+  withFile filePath ReadMode $ \h -> do
+    descriptorLen <- read <$> IO.hGetLine h :: IO Int
+    numReigon <- read <$> IO.hGetLine h :: IO Int
+    txt <- T.hGetContents h
+    let xs = parseDetectedRegionFeature txt
+    if numReigon == L.length xs
+      then return xs
+      else error $
+           "parseDetectedRegionFeatureFile: the expected number of regions " L.++
+           show numReigon L.++
+           " /= actural number " L.++
+           show (L.length xs)

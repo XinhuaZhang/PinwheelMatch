@@ -15,19 +15,23 @@ import           System.FilePath
 
 main = do
   args@(imagePath:detectedRegionFilePath:scaleStr:deltaStr:_) <- getArgs
-  (Image 8 img) <- readImageRepa imagePath True
+  (ImageRepa 8 img) <- readImageRepa imagePath True
   xs <- parseDetectedRegionFile detectedRegionFilePath
-  let scale = read scaleStr :: Double
+  let folderPath = "output/test/PlotDetectedRegion/"
+      scale = read scaleStr :: Double
       delta = read deltaStr :: Double
-      (Z :. nf :. rows :. cols) = extent img
+      (Z :. nf :. cols :. rows) = extent img
       ys =
         L.concat $
-        parMap rdeepseq (S.toList . detectedRegionBoundary scale delta) xs
-      zs = L.filter (\idx -> inRange ((0, 0), (rows - 1, cols - 1)) idx) ys
+        parMap
+          rdeepseq
+          (S.toList . detectedRegionFeature . detectedRegionBoundary scale delta)
+          xs
+      zs = L.filter (\idx -> inRange ((0, 0), (cols - 1, rows - 1)) idx) ys
       newArray =
         (runSTUArray $ do
            arr <-
-             newListArray ((0, 0, 0), (nf - 1, rows - 1, cols - 1)) . R.toList $
+             newListArray ((0, 0, 0), (nf - 1, cols - 1, rows - 1)) . R.toList $
              img
            M.mapM_
              (\(x, y) -> do
@@ -37,12 +41,16 @@ main = do
              zs
            return arr) :: UArray (Int, Int, Int) Double
       ys1 =
-        L.concat $ parMap rdeepseq (S.toList . detectedRegionSet scale delta) xs
-      zs1 = L.filter (\idx -> inRange ((0, 0), (rows - 1, cols - 1)) idx) ys1
+        L.concat $
+        parMap
+          rdeepseq
+          (S.toList . detectedRegionFeature . detectedRegionSet scale delta)
+          xs
+      zs1 = L.filter (\idx -> inRange ((0, 0), (cols - 1, rows - 1)) idx) ys1
       newArray1 =
         (runSTUArray $ do
            arr <-
-             newListArray ((0, 0, 0), (nf - 1, rows - 1, cols - 1)) . R.toList $
+             newListArray ((0, 0, 0), (nf - 1, cols - 1, rows - 1)) . R.toList $
              img
            M.mapM_
              (\(x, y) -> do
@@ -51,11 +59,10 @@ main = do
                 writeArray arr (2, x, y) 255)
              zs1
            return arr) :: UArray (Int, Int, Int) Double
-      folderPath = "output/test/PlotDetectedRegion/"
   createDirectoryIfMissing True folderPath
   plotImageRepa (folderPath L.++ takeBaseName imagePath L.++ ".png") .
-    Image 8 . fromListUnboxed (extent img) . Arr.elems $
+    ImageRepa 8 . fromListUnboxed (extent img) . Arr.elems $
     newArray
   plotImageRepa (folderPath L.++ takeBaseName imagePath L.++ "_fill.png") .
-    Image 8 . fromListUnboxed (extent img) . Arr.elems $
+    ImageRepa 8 . fromListUnboxed (extent img) . Arr.elems $
     newArray1

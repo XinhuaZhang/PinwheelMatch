@@ -1,7 +1,11 @@
 module OxfordAffine.Region
   ( module Types
+  , boundary
   , detectedRegionSet
   , detectedRegionBoundary
+  , computeCanonicalEllipse
+  , computePolarEllipse
+  , computePolarEllipseList
   ) where
 
 import           Data.List             as L
@@ -18,7 +22,7 @@ boundary set =
    in ((L.minimum xs, L.maximum xs), (L.minimum ys, L.maximum ys))
 
 {-# INLINE inRange #-}
-inRange :: Double -> DetectedRegion -> (Int,Int) -> Bool
+inRange :: Double -> DetectedRegion () -> (Int,Int) -> Bool
 inRange scale (DetectedRegion x y a' b' c' _) (i, j) =
   let x' = fromIntegral i - x
       y' = fromIntegral j - y
@@ -31,16 +35,21 @@ inRange scale (DetectedRegion x y a' b' c' _) (i, j) =
         else False
 
 {-# INLINE detectedRegionSet #-}
-detectedRegionSet :: Double -> Double -> DetectedRegion -> Set (Int, Int)
-detectedRegionSet scale delta detectedRegion@(DetectedRegion x y _ _ _ _) =
-  let ((minY, maxY), (minX, maxX)) =
-        boundary $ detectedRegionBoundary scale delta detectedRegion
-   in S.fromList .
-      L.map (\(a, b) -> (b, a)) . L.filter (inRange scale detectedRegion) $
-      [(i, j) | i <- [minX .. maxX], j <- [minY .. maxY]]
+detectedRegionSet ::
+     Double -> Double -> DetectedRegion () -> DetectedRegion (Set (Int, Int))
+detectedRegionSet scale delta detectedRegion =
+  let ((minX, maxX), (minY, maxY)) =
+        boundary . detectedRegionFeature $
+        detectedRegionBoundary scale delta detectedRegion
+   in fmap
+        (\_ ->
+           S.fromList . L.filter (inRange scale detectedRegion) $
+           [(i, j) | i <- [minX .. maxX], j <- [minY .. maxY]])
+        detectedRegion
 
 {-# INLINE detectedRegionBoundary #-}
-detectedRegionBoundary :: Double -> Double -> DetectedRegion -> Set (Int, Int)
+detectedRegionBoundary ::
+     Double -> Double -> DetectedRegion () -> DetectedRegion (Set (Int, Int))
 detectedRegionBoundary scale delta (DetectedRegion x y a b c _) =
   let (eigVal, eigVec) = eigSH . trustSym . (2 >< 2) $ [a, b, b, c]
       (l2:l1:[]) = L.map (\x -> 1 / sqrt x) $ NL.toList eigVal
@@ -55,4 +64,39 @@ detectedRegionBoundary scale delta (DetectedRegion x y a b c _) =
              ( x + i * cos alpha + j * sin alpha
              , y + j * cos alpha - i * sin alpha))
           xs
-   in S.fromList . L.map (\(i, j) -> (round j, round i)) $ ys
+   in DetectedRegion x y a b c .
+      S.fromList . L.map (\(i, j) -> (round i, round j)) $
+      ys
+      
+{-# INLINE computeCanonicalEllipse #-}
+computeCanonicalEllipse :: DetectedRegion () -> CanonicalEllipse
+computeCanonicalEllipse (DetectedRegion _ _ a b c _) =
+  let (eigVal, eigVec) = eigSH . trustSym . (2 >< 2) $ [a, b, b, c]
+      (l2:l1:[]) = L.map (\x -> 1 / sqrt x) $ NL.toList eigVal
+      alpha = atan2 (eigVec `atIndex` (1, 1)) (eigVec `atIndex` (1, 0))
+   in CanonicalEllipse (l2 / l1) alpha
+
+-- Compute the Index of PolarEllise coordinates
+{-# INLINE computePolarEllipse #-}
+computePolarEllipse :: (Int, Int) -> CanonicalEllipse -> PolarEllipseIndex
+computePolarEllipse (x, y) (CanonicalEllipse a alpha) =
+  let mat = (2 >< 2) [cos alpha, -(sin alpha), sin alpha, cos alpha]
+      vec = vector [fromIntegral x, fromIntegral y]
+      (i:j:[]) = NL.toList $ mat #> vec
+      r = sqrt $ i ^ (2 :: Int) + (j / a) ^ (2 :: Int)
+      theta = atan (i / (a * j))
+   in PolarEllipseIndex r theta
+
+{-# INLINE computePolarEllipseList #-}
+computePolarEllipseList ::
+     [(Int, Int)] -> CanonicalEllipse -> [PolarEllipseIndex]
+computePolarEllipseList idx (CanonicalEllipse a alpha) =
+  let mat = (2 >< 2) [cos alpha, -(sin alpha), sin alpha, cos alpha]
+   in L.map
+        (\(x, y) ->
+           let vec = vector [fromIntegral x, fromIntegral y]
+               (i:j:[]) = NL.toList $ mat #> vec
+               r = sqrt $ i ^ (2 :: Int) + (j / a) ^ (2 :: Int)
+               theta = atan (i / (a * j))
+            in PolarEllipseIndex r theta)
+        idx
