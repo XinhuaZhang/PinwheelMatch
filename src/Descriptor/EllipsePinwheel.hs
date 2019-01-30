@@ -39,7 +39,7 @@ ellpisePinwheel ::
   -> Int
   -> Complex Double
 ellpisePinwheel canonicalEllipse rf af alpha x y
-  | r <= (2 / pi * (abs af)) = 0
+  | r <= (0.75 / pi * (abs af)) || r <= (0.75 / pi * (abs rf)) = 0
   | otherwise = (((r) :+ 0) ** (alpha :+ (-rf))) * exp (0 :+ ((-af) * theta))
   where
     PolarEllipseIndex r theta = computePolarEllipse (x, y) canonicalEllipse

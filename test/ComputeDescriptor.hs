@@ -18,8 +18,8 @@ import           Utils.Parallel
 main = do
   args@(imagePath1:detectedRegionFilePath1:imagePath2:detectedRegionFilePath2:scaleStr:deltaStr:radialFreqStr:angularFreqStr:alphaStr:numKmeansCenterStr:kmeansThresholdStr:descriptorLengthStr:strideStr:numThreadStr:batchSizeStr:_) <-
     getArgs
-  (Image 8 img1) <- readImageRepa imagePath1 False
-  (Image 8 img2) <- readImageRepa imagePath2 False
+  (ImageRepa 8 img1) <- readImageRepa imagePath1 False
+  (ImageRepa 8 img2) <- readImageRepa imagePath2 False
   let folderPath = "output/test/ComputeDescriptor"
       scale = read scaleStr :: Double
       delta = read deltaStr :: Double

@@ -73,8 +73,8 @@ computeCanonicalEllipse :: DetectedRegion () -> CanonicalEllipse
 computeCanonicalEllipse (DetectedRegion _ _ a b c _) =
   let (eigVal, eigVec) = eigSH . trustSym . (2 >< 2) $ [a, b, b, c]
       (l2:l1:[]) = L.map (\x -> 1 / sqrt x) $ NL.toList eigVal
-      alpha = atan2 (eigVec `atIndex` (1, 1)) (eigVec `atIndex` (1, 0))
-   in CanonicalEllipse (l2 / l1) alpha
+      alpha = atan2 (eigVec `atIndex` (1, 0)) (eigVec `atIndex` (1, 1))
+   in CanonicalEllipse (l1 / l2) alpha
 
 -- Compute the Index of PolarEllise coordinates
 {-# INLINE computePolarEllipse #-}
@@ -83,8 +83,8 @@ computePolarEllipse (x, y) (CanonicalEllipse a alpha) =
   let mat = (2 >< 2) [cos alpha, -(sin alpha), sin alpha, cos alpha]
       vec = vector [fromIntegral x, fromIntegral y]
       (i:j:[]) = NL.toList $ mat #> vec
-      r = sqrt $ i ^ (2 :: Int) + (j / a) ^ (2 :: Int)
-      theta = atan (i / (a * j))
+      r = sqrt $ (i / a) ^ (2 :: Int) + (j) ^ (2 :: Int)
+      theta = angleFunctionRad (a * j) i -- atan (i / (a * j))
    in PolarEllipseIndex r theta
 
 {-# INLINE computePolarEllipseList #-}

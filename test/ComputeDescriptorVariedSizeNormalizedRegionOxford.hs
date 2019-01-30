@@ -75,7 +75,7 @@ main = do
   patches2 <- MP.mapM (\path -> readImageRepa path False) patchPathList2
   let pinwheelParamsList1 =
         L.map
-          (\(Image _ img) ->
+          (\(ImageRepa _ img) ->
              let (Z :. nf :. cols :. rows) = extent img
               in PinwheelParams
                    rows
@@ -86,7 +86,7 @@ main = do
         patches1
       pinwheelParamsList2 =
         L.map
-          (\(Image _ img) ->
+          (\(ImageRepa _ img) ->
              let (Z :. nf :. cols :. rows) = extent img
               in PinwheelParams
                    rows
