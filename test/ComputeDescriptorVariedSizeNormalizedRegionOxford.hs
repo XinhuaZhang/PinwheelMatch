@@ -171,13 +171,13 @@ main = do
     affineDataFeature pinwheelFeatureStride2
   let vladFeatures1 = computeVLADP parallelParams kmeansModel pinwheelFeature1
       vladFeatures2 = computeVLADP parallelParams kmeansModel pinwheelFeature2
-      (pcaMat, eigValVec, _) =
-        pcaSVDS
-          descriptorLength
-          ((L.map (detectedRegionFeature) . affineDataFeature $ vladFeatures1) L.++
-           (L.map (detectedRegionFeature) . affineDataFeature $ vladFeatures2))
-      vladFeaturesPCA1 = descriptorPCAP parallelParams pcaMat vladFeatures1
-      vladFeaturesPCA2 = descriptorPCAP parallelParams pcaMat vladFeatures2
+      -- (pcaMat, eigValVec, _) =
+      --   pcaSVDS
+      --     descriptorLength
+      --     ((L.map (detectedRegionFeature) . affineDataFeature $ vladFeatures1) L.++
+      --      (L.map (detectedRegionFeature) . affineDataFeature $ vladFeatures2))
+      -- vladFeaturesPCA1 = descriptorPCAP parallelParams pcaMat vladFeatures1
+      -- vladFeaturesPCA2 = descriptorPCAP parallelParams pcaMat vladFeatures2
       -- vladFeaturesPCA1 = descriptorPCAP' parallelParams pcaMat eigValVec vladFeatures1
       -- vladFeaturesPCA2 = descriptorPCAP' parallelParams pcaMat eigValVec vladFeatures2
   writeAffineDescriptor folderPath vladFeatures1

@@ -38,7 +38,8 @@ data PinwheelParams = PinwheelParams
 {-# INLINE pinwheel #-}
 pinwheel :: Double -> Double -> Double -> Int -> Int -> Complex Double
 pinwheel rf af alpha x y
-  | r <= (2 / pi * (abs af)) = 0
+  -- | r <= (2 / pi * (abs af)) = 0
+  | r <= (0.75 / pi * (abs af)) || r <= (0.75 / pi * (abs rf)) = 0
   | otherwise = (((r) :+ 0) ** (alpha :+ (-rf))) * exp (0 :+ ((-af) * theta))
   where
     r = sqrt . fromIntegral $ x ^ (2 :: Int) + y ^ (2 :: Int)

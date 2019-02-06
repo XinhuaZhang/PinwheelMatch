@@ -268,19 +268,21 @@ normalizeVec vec
 
 vlad :: ClusterCenter -> [VU.Vector Double] -> VU.Vector Double
 vlad center' =
-  normalizeVec .
-  VU.map (\x -> (signum x) * sqrt (abs x)) .
+  -- normalizeVec .
+  -- VU.map (\x -> (signum x) * sqrt (abs x)) .
+  -- l1norm .
   VU.concat .
   V.toList .
   V.accum (VU.zipWith (+)) (V.replicate k (VU.replicate vecLen 0)) .
   L.map
     (\vec ->
        let idx = V.minIndex . V.map (distFunc vec) $ center'
-       in (idx, VU.zipWith (-) vec (center' V.! idx)))
+        in (idx, VU.zipWith (-) vec (center' V.! idx)))
   where
     k = V.length center'
     vecLen = VU.length . V.head $ center'
-    
+    l1norm vec = VU.map (/ VU.sum vec) vec
+
 
 -- {-# INLINE vlad #-}
 

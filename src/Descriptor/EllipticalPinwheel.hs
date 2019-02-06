@@ -1,8 +1,9 @@
-module Descriptor.EllipsePinwheel
+module Descriptor.EllipticalPinwheel
   ( ConvolutionalType(..)
-  , EllpisePinwheelParams(..)
-  , makeEllpisePinwheelExpansion
-  , makeEllpisePinwheelConvolution
+  , EllipticalPinwheelParams(..)
+  , makeEllipticalPinwheelExpansion
+  , makeEllipticalPinwheelConvolution
+  , makeEllipticalPinwheelConvolution'
   , module DFT.Plan
   ) where
 
@@ -20,17 +21,17 @@ import           OxfordAffine.Region
 import           Types
 import           Utils
 
-data EllpisePinwheelParams = EllpisePinwheelParams
-  { ellpisePinwheelParamsRows             :: Int
-  , ellpisePinwheelParamsCols             :: Int
-  , ellpisePinwheelParamsRadialFreq       :: [Double]
-  , ellpisePinwheelParamsAngularFreq      :: [Double]
-  , ellpisePinwheelParamsAlpha            :: Double
-  , ellpisePinwheelParamsCanonicalEllipse :: CanonicalEllipse
+data EllipticalPinwheelParams = EllipticalPinwheelParams
+  { ellipticalPinwheelParamsRows             :: Int
+  , ellipticalPinwheelParamsCols             :: Int
+  , ellipticalPinwheelParamsRadialFreq       :: [Double]
+  , ellipticalPinwheelParamsAngularFreq      :: [Double]
+  , ellipticalPinwheelParamsAlpha            :: Double
+  , ellipticalPinwheelParamsCanonicalEllipse :: CanonicalEllipse
   } deriving (Read, Show)
 
-{-# INLINE ellpisePinwheel #-}
-ellpisePinwheel ::
+{-# INLINE ellipticalPinwheel #-}
+ellipticalPinwheel ::
      CanonicalEllipse
   -> Double
   -> Double
@@ -38,7 +39,7 @@ ellpisePinwheel ::
   -> Int
   -> Int
   -> Complex Double
-ellpisePinwheel canonicalEllipse rf af alpha x y
+ellipticalPinwheel canonicalEllipse rf af alpha x y
   | r <= (0.75 / pi * (abs af)) || r <= (0.75 / pi * (abs rf)) = 0
   | otherwise = (((r) :+ 0) ** (alpha :+ (-rf))) * exp (0 :+ ((-af) * theta))
   where
@@ -50,17 +51,17 @@ makeFilter :: Int -> Int -> Int -> Int -> (Int -> Int -> a) -> [a]
 makeFilter rows cols rCenter cCenter f =
   [f (r - rCenter) (c - cCenter) | c <- [0 .. cols - 1], r <- [0 .. rows - 1]]
 
-{-# INLINE makeEllpisePinwheelExpansion #-}
-makeEllpisePinwheelExpansion ::
-     EllpisePinwheelParams -> Int -> Int -> [[VU.Vector (Complex Double)]]
-makeEllpisePinwheelExpansion (EllpisePinwheelParams rows cols rfs afs alpha canonicalEllipse) rCenter cCenter =
+{-# INLINE makeEllipticalPinwheelExpansion #-}
+makeEllipticalPinwheelExpansion ::
+     EllipticalPinwheelParams -> Int -> Int -> [[VU.Vector (Complex Double)]]
+makeEllipticalPinwheelExpansion (EllipticalPinwheelParams rows cols rfs afs alpha canonicalEllipse) rCenter cCenter =
   [ [ VU.fromList $
   makeFilter
     rows
     cols
     rCenter
     cCenter
-    (ellpisePinwheel canonicalEllipse rf af alpha)
+    (ellipticalPinwheel canonicalEllipse rf af alpha)
   | af <- afs
   ]
   | rf <- rfs
@@ -91,20 +92,20 @@ conjugateFunc x =
     Convolution      -> id
     Crosscorrelation -> Prelude.map conjugate
 
--- make both fftw plan and EllpisePinwheel filters
-{-# INLINE makeEllpisePinwheelConvolution #-}
-makeEllpisePinwheelConvolution ::
+-- make both fftw plan and EllipticalPinwheel filters
+{-# INLINE makeEllipticalPinwheelConvolution #-}
+makeEllipticalPinwheelConvolution ::
      DFTPlan
-  -> EllpisePinwheelParams
+  -> EllipticalPinwheelParams
   -> ConvolutionalType
   -> IO (DFTPlan, [[VS.Vector (Complex Double)]])
-makeEllpisePinwheelConvolution plan (EllpisePinwheelParams rows cols rfs afs alpha canonicalEllipse) filterType = do
+makeEllipticalPinwheelConvolution plan (EllipticalPinwheelParams rows cols rfs afs alpha canonicalEllipse) filterType = do
   let filterTemp =
         VS.fromList . conjugateFunc filterType $
         makeFilterConvolution
           rows
           cols
-          (ellpisePinwheel canonicalEllipse (L.last rfs) (L.last afs) alpha)
+          (ellipticalPinwheel canonicalEllipse (L.last rfs) (L.last afs) alpha)
       filterList =
         L.map
           (\rf ->
@@ -114,7 +115,7 @@ makeEllpisePinwheelConvolution plan (EllpisePinwheelParams rows cols rfs afs alp
                   makeFilterConvolution
                     rows
                     cols
-                    (ellpisePinwheel canonicalEllipse rf af alpha))
+                    (ellipticalPinwheel canonicalEllipse rf af alpha))
                afs)
           rfs
   lock <- getFFTWLock
@@ -125,3 +126,34 @@ makeEllpisePinwheelConvolution plan (EllpisePinwheelParams rows cols rfs afs alp
       (dftExecuteBatch p2 (DFTPlanID DFT1DG [cols, rows] [0, 1]))
       filterList
   return (p2, filters)
+
+{-# INLINE makeEllipticalPinwheelConvolution' #-}
+makeEllipticalPinwheelConvolution' ::
+     DFTPlan
+  -> EllipticalPinwheelParams
+  -> ConvolutionalType
+  -> IO [[VS.Vector (Complex Double)]]
+makeEllipticalPinwheelConvolution' plan (EllipticalPinwheelParams rows cols rfs afs alpha canonicalEllipse) filterType = do
+  let filterTemp =
+        VS.fromList . conjugateFunc filterType $
+        makeFilterConvolution
+          rows
+          cols
+          (ellipticalPinwheel canonicalEllipse (L.last rfs) (L.last afs) alpha)
+      filterList =
+        L.map
+          (\rf ->
+             L.map
+               (\af ->
+                  VS.fromList . conjugateFunc filterType $
+                  makeFilterConvolution
+                    rows
+                    cols
+                    (ellipticalPinwheel canonicalEllipse rf af alpha))
+               afs)
+          rfs
+  filters <-
+    M.mapM
+      (dftExecuteBatch plan (DFTPlanID DFT1DG [cols, rows] [0, 1]))
+      filterList
+  return filters

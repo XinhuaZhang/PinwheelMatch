@@ -1,12 +1,14 @@
-module ComputeDescriptor where
+module ComputeDescriptorEllipticalPinwheel where
 
-import           Control.Monad        as M
-import           Data.Array.Repa      as R
+import           Control.Monad                 as M
+import           Control.Monad.Parallel        as MP
+import           Data.Array.Repa               as R
 import           Data.Complex
-import           Data.List            as L
-import           Data.Set             as S
-import           Data.Vector.Storable as VS
-import           Data.Vector.Unboxed  as VU
+import           Data.List                     as L
+import           Data.Set                      as S
+import           Data.Vector.Storable          as VS
+import           Data.Vector.Unboxed           as VU
+import           Descriptor.EllipticalPinwheel
 import           Descriptor.Pinwheel
 import           Image.IO
 import           OxfordAffine
@@ -16,11 +18,11 @@ import           System.FilePath
 import           Utils.Parallel
 
 main = do
-  args@(imagePath1:detectedRegionFilePath1:imagePath2:detectedRegionFilePath2:scaleStr:deltaStr:radialFreqStr:angularFreqStr:alphaStr:numKmeansCenterStr:kmeansThresholdStr:descriptorLengthStr:strideStr:numThreadStr:batchSizeStr:_) <-
+  args@(imagePath1:detectedRegionFilePath1:imagePath2:detectedRegionFilePath2:scaleStr:deltaStr:radialFreqStr:angularFreqStr:alphaStr:numKmeansCenterStr:kmeansThresholdStr:descriptorLengthStr:strideStr:deltaThetaStr:deltaAStr:maxAStr:numThreadStr:batchSizeStr:_) <-
     getArgs
   (ImageRepa 8 img1) <- readImageRepa imagePath1 False
   (ImageRepa 8 img2) <- readImageRepa imagePath2 False
-  let folderPath = "output/test/ComputeDescriptor"
+  let folderPath = "output/test/ComputeDescriptorEllipticalPinwheel"
       scale = read scaleStr :: Double
       delta = read deltaStr :: Double
       radialFreq = read radialFreqStr :: Double
@@ -30,6 +32,9 @@ main = do
       kmeansThreshold = read kmeansThresholdStr :: Double
       descriptorLength = read descriptorLengthStr :: Int
       stride = read strideStr :: Int
+      deltaTheta = (read deltaThetaStr :: Double) / 180 * pi
+      deltaA = read deltaAStr :: Double
+      maxA = read maxAStr :: Double
       numThread = read numThreadStr :: Int
       batchSize = read batchSizeStr :: Int
       parallelParams = ParallelParams numThread batchSize
@@ -41,6 +46,20 @@ main = do
           [0 .. radialFreq]
           [-angularFreq .. angularFreq]
           alpha
+      canonicalEllipseList =
+        [ CanonicalEllipse a theta
+        | a <- [1 + deltaA,1 + 2 * deltaA .. maxA]
+        , theta <- [0,deltaTheta .. pi - deltaTheta]
+        ]
+      ellipticalPinwheelParamsList =
+        L.map
+          (EllipticalPinwheelParams
+             rows
+             cols
+             [0 .. radialFreq]
+             [-angularFreq .. angularFreq]
+             alpha)
+          canonicalEllipseList
       imgVec1 =
         L.map
           (\i ->
@@ -55,27 +74,61 @@ main = do
              VU.map (\x -> x :+ 0) . toUnboxed . computeS . R.slice img2 $
              (Z :. i :. R.All :. R.All))
           [0 .. nf - 1]
-  createDirectoryIfMissing True folderPath
   print pinwheelParams
+  print
+    [ (a, theta)
+    | a <- [1 + deltaA,1 + 2 * deltaA .. maxA]
+    , theta <- [0,deltaTheta .. pi - deltaTheta]
+    ]
+  createDirectoryIfMissing True folderPath
   -- read affine regions
   affineRegion1 <-
     computeAffineRegionFromFile imagePath1 detectedRegionFilePath1 scale delta
   affineRegion2 <-
     computeAffineRegionFromFile imagePath2 detectedRegionFilePath2 scale delta
   -- create fftw plan and filters
-  (plan, filters) <-
-    makePinwheelConvolution emptyPlan pinwheelParams Convolution
+  plan <- makePinwheelConvolutionPlan Convolution emptyPlan pinwheelParams
+  pinwheelFilter <- makePinwheelConvolution' plan pinwheelParams Convolution
+  ellipticalPinwheelFilter <-
+    MP.mapM
+      (\params -> makeEllipticalPinwheelConvolution' plan params Convolution)
+      ellipticalPinwheelParamsList
   -- apply filters to image
-  filteredVec1 <- applyPinwheelConvolutionP plan rows cols filters imgVec1
-  filteredVec2 <- applyPinwheelConvolutionP plan rows cols filters imgVec2
-  let filteredImage1 =
-        fromUnboxed (Z :. (L.length . L.head $ filteredVec1) :. cols :. rows) .
+  pinwheelFilteredVec1 <-
+    applyPinwheelConvolutionP plan rows cols pinwheelFilter imgVec1
+  pinwheelFilteredVec2 <-
+    applyPinwheelConvolutionP plan rows cols pinwheelFilter imgVec2
+  ellipticalPinwheelFilteredVec1 <-
+    M.mapM
+      (\filter -> applyPinwheelConvolutionP plan rows cols filter imgVec1)
+      ellipticalPinwheelFilter
+  ellipticalPinwheelFilteredVec2 <-
+    M.mapM
+      (\filter -> applyPinwheelConvolutionP plan rows cols filter imgVec2)
+      ellipticalPinwheelFilter
+  -- pooling
+  let pooledVec1 =
+        L.foldl1'
+          (L.zipWith (parZipWith rdeepseq (VS.zipWith (+))))
+          (pinwheelFilteredVec1 : ellipticalPinwheelFilteredVec1)
+      pooledVec2 =
+        L.foldl1'
+          (L.zipWith (parZipWith rdeepseq (VS.zipWith (+))))
+          (pinwheelFilteredVec2 : ellipticalPinwheelFilteredVec2)
+      filteredImage1 =
+        fromUnboxed
+          (Z :. (L.length . L.head . L.head $ ellipticalPinwheelFilteredVec1) :.
+           cols :.
+           rows) .
         VS.convert . VS.concat . L.head $
-        filteredVec1
+        pooledVec1
       filteredImage2 =
-        fromUnboxed (Z :. (L.length . L.head $ filteredVec2) :. cols :. rows) .
+        fromUnboxed
+          (Z :. (L.length . L.head . L.head $ ellipticalPinwheelFilteredVec2) :.
+           cols :.
+           rows) .
         VS.convert . VS.concat . L.head $
-        filteredVec2
+        pooledVec2
       pinwheelFeature1 =
         getFeatureFromAffineRegionP
           parallelParams
@@ -103,15 +156,13 @@ main = do
       kmeansThreshold $
     pinwheelFeature1' L.++ pinwheelFeature2'
   -- compute VLAD features
-  let vladFeatures1' = computeVLADP parallelParams kmeansModel pinwheelFeature1
-      vladFeatures2' = computeVLADP parallelParams kmeansModel pinwheelFeature2
-      (vladFeatures1, vladFeatures2) =
-        zca parallelParams (24 * numKmeansCenter) vladFeatures1' vladFeatures2'
+  let vladFeatures1 = computeVLADP parallelParams kmeansModel pinwheelFeature1
+      vladFeatures2 = computeVLADP parallelParams kmeansModel pinwheelFeature2
       -- (pcaMat, eigValVec, _) =
       --   pcaSVDS
       --     descriptorLength
-      --     ((L.map (detectedRegionFeature) . affineDataFeature $ vladFeatures1) L.++
-      --      (L.map (detectedRegionFeature) . affineDataFeature $ vladFeatures2))
+      --     ((L.map detectedRegionFeature . affineDataFeature $ vladFeatures1) L.++
+      --      (L.map detectedRegionFeature . affineDataFeature $ vladFeatures2))
       -- vladFeaturesPCA1 = descriptorPCAP parallelParams pcaMat vladFeatures1
       -- vladFeaturesPCA2 = descriptorPCAP parallelParams pcaMat vladFeatures2
       -- vladFeaturesPCA1 = descriptorPCAP' parallelParams pcaMat eigValVec vladFeatures1

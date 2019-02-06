@@ -72,8 +72,8 @@ tests:
     # - -optlo-O3
     dependencies:
     - PinwheelMatch
-  PlotEllipsePinwheel-test:
-    main:                PlotEllipsePinwheel.hs
+  PlotEllipticalPinwheel-test:
+    main:                PlotEllipticalPinwheel.hs
     source-dirs:         test
     ghc-options:
     - -threaded
@@ -81,7 +81,7 @@ tests:
     - -with-rtsopts=-N
     - -O2
     - -j4
-    - -main-is PlotEllipsePinwheel
+    - -main-is PlotEllipticalPinwheel
     # - -fno-liberate-case
     # - -funfolding-use-threshold1000
     # - -funfolding-keeness-factor1000
@@ -139,6 +139,31 @@ tests:
     # - -optlo-O3
     dependencies:
     - PinwheelMatch
+  ComputeDescriptorNormalizedRegionOxfordCascade-test:
+    main:                ComputeDescriptorNormalizedRegionOxfordCascade.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    - -O2
+    - -j4
+    - -main-is ComputeDescriptorNormalizedRegionOxfordCascade
+    extra-libraries:
+    - stdc++
+    - lapack
+    - gomp
+    - fftw3
+    - fftw3f
+    - fftw3l
+    - m
+    # - -fno-liberate-case
+    # - -funfolding-use-threshold1000
+    # - -funfolding-keeness-factor1000
+    # - -fllvm
+    # - -optlo-O3
+    dependencies:
+    - PinwheelMatch
   ComputeDescriptorVariedSizeNormalizedRegionOxford-test:
     main:                ComputeDescriptorVariedSizeNormalizedRegionOxford.hs
     source-dirs:         test
@@ -157,6 +182,48 @@ tests:
     - fftw3f
     - fftw3l
     - m
+    # - -fno-liberate-case
+    # - -funfolding-use-threshold1000
+    # - -funfolding-keeness-factor1000
+    # - -fllvm
+    # - -optlo-O3
+    dependencies:
+    - PinwheelMatch
+  ComputeDescriptorEllipticalPinwheel-test:
+    main:                ComputeDescriptorEllipticalPinwheel.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    - -O2
+    - -j4
+    - -main-is ComputeDescriptorEllipticalPinwheel
+    extra-libraries:
+    - stdc++
+    - lapack
+    - gomp
+    - fftw3
+    - fftw3f
+    - fftw3l
+    - m
+    # - -fno-liberate-case
+    # - -funfolding-use-threshold1000
+    # - -funfolding-keeness-factor1000
+    # - -fllvm
+    # - -optlo-O3
+    dependencies:
+    - PinwheelMatch
+  CropRegion-test:
+    main:                CropRegion.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    - -O2
+    - -j4
+    - -main-is CropRegion
     # - -fno-liberate-case
     # - -funfolding-use-threshold1000
     # - -funfolding-keeness-factor1000
